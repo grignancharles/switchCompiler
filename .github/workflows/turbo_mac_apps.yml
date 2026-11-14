@@ -1,0 +1,76 @@
+name: Turbo Build macOS Apps (OOT + HL en Paralelo)
+
+on:
+  workflow_dispatch:
+    inputs:
+      oot_drive_url:
+        description: 'Enlace Google Drive OOT_ExeFS_Only.zip (34.7 MB)'
+        required: true
+        default: 'https://drive.google.com/file/d/1JfTAbFsAUlV7FjpqmSqDuII56__Ha91Z/view?usp=sharing'
+        type: string
+      hl_drive_url:
+        description: 'Enlace Google Drive HL_ExeFS_Only.zip (64.2 MB)'
+        required: true
+        default: 'https://drive.google.com/file/d/1T7OOAdqO_-ig7iEAwGL7AkBvcE-LOg4z/view?usp=sharing'
+        type: string
+
+jobs:
+  build-oot:
+    name: 1. Zelda OOT (macOS .app)
+    runs-on: macos-14
+    steps:
+      - name: Clonar kid-with-sword-remake (ff10)
+        run: git clone --branch ff10 --depth 1 https://github.com/cheemu21/kid-with-sword-remake.git nx_repo
+      - name: Instalar dependencias Python y gdown
+        run: pip install -q pycryptodome pillow requests tqdm zstandard lz4 "capstone>=5,<6" fonttools zbic backports.zstd gdown
+      - name: Descargar OOT_ExeFS_Only.zip
+        env:
+          URL: ${{ github.event.inputs.oot_drive_url }}
+        run: |
+          mkdir -p work_oot/extract/v131072
+          gdown --fuzzy "$URL" -O oot.zip
+          unzip -q oot.zip -d work_oot/extract/v131072/
+      - name: Compilar Shaders y .app macOS
+        run: |
+          printf "DM_COOL_MODE=1\nDM_OPMODE=0\nDM_FPS_TARGET=30\nDM_RENDER_SCALE=0.8\nDM_PSO_MTL4=0\n" > env_oot.txt
+          cd nx_repo
+          python3 scripts/build_ipa_from_nsp.py --platform mac-app --romfs separate --seen-shaders --work-dir ../work_oot --env-file ../env_oot.txt -o ../Zelda_OOT_FF10_Mac.app
+          xattr -cr ../Zelda_OOT_FF10_Mac.app
+          codesign --force --deep --sign - ../Zelda_OOT_FF10_Mac.app
+          cd .. && zip -r -y -q Zelda_OOT_FF10_Mac_App_Ready.zip Zelda_OOT_FF10_Mac.app
+      - name: Subir Artifact OOT
+        uses: actions/upload-artifact@v4
+        with:
+          name: Zelda_OOT_FF10_Mac_App
+          path: Zelda_OOT_FF10_Mac_App_Ready.zip
+          retention-days: 5
+
+  build-hl:
+    name: 2. Hogwarts Legacy (macOS .app)
+    runs-on: macos-14
+    steps:
+      - name: Clonar kid-with-sword-remake (ff10)
+        run: git clone --branch ff10 --depth 1 https://github.com/cheemu21/kid-with-sword-remake.git nx_repo
+      - name: Instalar dependencias Python y gdown
+        run: pip install -q pycryptodome pillow requests tqdm zstandard lz4 "capstone>=5,<6" fonttools zbic backports.zstd gdown
+      - name: Descargar HL_ExeFS_Only.zip
+        env:
+          URL: ${{ github.event.inputs.hl_drive_url }}
+        run: |
+          mkdir -p work_hl/extract/v327680
+          gdown --fuzzy "$URL" -O hl.zip
+          unzip -q hl.zip -d work_hl/extract/v327680/
+      - name: Compilar Shaders y .app macOS
+        run: |
+          printf "DM_COOL_MODE=1\nDM_OPMODE=0\nDM_FPS_TARGET=30\nDM_RENDER_SCALE=0.75\nDM_PSO_MTL4=0\nDM_METALFX_ENABLE=1\n" > env_hl.txt
+          cd nx_repo
+          python3 scripts/build_ipa_from_nsp.py --platform mac-app --romfs separate --seen-shaders --work-dir ../work_hl --env-file ../env_hl.txt -o ../Hogwarts_Legacy_Mac.app
+          xattr -cr ../Hogwarts_Legacy_Mac.app
+          codesign --force --deep --sign - ../Hogwarts_Legacy_Mac.app
+          cd .. && zip -r -y -q Hogwarts_Legacy_Mac_App_Ready.zip Hogwarts_Legacy_Mac.app
+      - name: Subir Artifact HL
+        uses: actions/upload-artifact@v4
+        with:
+          name: Hogwarts_Legacy_Mac_App
+          path: Hogwarts_Legacy_Mac_App_Ready.zip
+          retention-days: 5
