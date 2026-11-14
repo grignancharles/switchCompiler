@@ -17,7 +17,7 @@ on:
 jobs:
   build-oot:
     name: 1. Zelda OOT (macOS .app)
-    runs-on: macos-14
+    runs-on: macos-latest
     steps:
       - name: Clonar kid-with-sword-remake (ff10)
         run: git clone --branch ff10 --depth 1 https://github.com/cheemu21/kid-with-sword-remake.git nx_repo
@@ -47,7 +47,7 @@ jobs:
 
   build-hl:
     name: 2. Hogwarts Legacy (macOS .app)
-    runs-on: macos-14
+    runs-on: macos-latest
     steps:
       - name: Clonar kid-with-sword-remake (ff10)
         run: git clone --branch ff10 --depth 1 https://github.com/cheemu21/kid-with-sword-remake.git nx_repo
